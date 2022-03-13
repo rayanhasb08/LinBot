@@ -72,21 +72,40 @@ class music_cog(commands.Cog):
 
     @commands.command(name="play", aliases=["p", "playing"], help="Plays a selected song from youtube")
     async def play(self, ctx, *args):
+        global voice_channel
         query = " ".join(args)
 
-        voice_channel = ctx.author.voice.channel
-        if voice_channel is None:
+        if ctx.author.voice is None:
             # you need to be connected so that the bot knows where to go
-            await ctx.send("Connect to a voice channel!")
+            await ctx.send("""``` Connecte toi a un channel ```""")
+        elif self.vc is not None:
+            voice_channel = ctx.author.voice.channel
+            if self.vc.channel is not voice_channel:
+                await ctx.send("""``` Bot déjà connecter sur un serveur, prochaine update pour que ça marche quand même ```""")
+            elif self.is_paused:
+                self.vc.resume()
+            else:
+                voice_channel = ctx.author.voice.channel
+                song = self.search_yt(query)
+                if type(song) == type(True):
+                    await ctx.send(
+                        """``` Could not download the song. Incorrect format try another keyword. This could be due to playlist or a livestream format. ```""")
+                else:
+                    await ctx.send(f"""```Song {str(song['title'])} is added to the queue```""")
+                    self.music_queue.append([song, voice_channel])
+
+                    if self.is_playing is False:
+                        await self.play_music(ctx)
         elif self.is_paused:
             self.vc.resume()
         else:
+            voice_channel = ctx.author.voice.channel
             song = self.search_yt(query)
             if type(song) == type(True):
                 await ctx.send(
-                    "Could not download the song. Incorrect format try another keyword. This could be due to playlist or a livestream format.")
+                    """```Could not download the song. Incorrect format try another keyword. This could be due to playlist or a livestream format.```""")
             else:
-                await ctx.send(f"Song {str(song['title'])} is added to the queue")
+                await ctx.send(f"""```Song {str(song['title'])} is added to the queue```""")
                 self.music_queue.append([song, voice_channel])
 
                 if self.is_playing is False:
@@ -94,47 +113,111 @@ class music_cog(commands.Cog):
 
     @commands.command(name="pause", help="Pauses the current song")
     async def pause(self, ctx, *args):
-        if self.is_playing:
-            self.is_playing = False
-            self.is_paused = True
-            self.vc.pause()
-        elif self.is_paused:
-            self.vc.resume()
+        if ctx.author.voice is None:
+            # you need to be connected so that the bot knows where to go
+            await ctx.send("""``` Connecte toi a un channel ``` """)
+            return
+        elif self.vc is not None:
+            voice_channel = ctx.author.voice.channel
+            if self.vc.channel is not voice_channel:
+                await ctx.send(
+                    """``` Bot déjà connecter sur un serveur, prochaine update pour que ça marche quand même ``` """)
+                return
+            else:
+                if self.is_playing:
+                    self.is_playing = False
+                    self.is_paused = True
+                    await ctx.send("""``` Music paused ``` """)
+                    self.vc.pause()
+                elif self.is_paused:
+                    await ctx.send("""``` Music resumed ``` """)
+                    self.vc.resume()
 
     @commands.command(name="resume", aliases=["r"], help="Resumes playing")
     async def resume(self, ctx, *args):
+        if ctx.author.voice is None:
+            # you need to be connected so that the bot knows where to go
+            await ctx.send("""``` Connecte toi a un channel ``` """)
+            return
+        elif self.vc is not None:
+            voice_channel = ctx.author.voice.channel
+            if self.vc.channel is not voice_channel:
+                await ctx.send("""``` Bot déjà connecter sur un serveur, prochaine update pour que ça marche quand même ``` """)
+                return
         if self.is_paused:
+            await ctx.send("""``` Music resumed ``` """)
             self.vc.resume()
 
     @commands.command(name="skip", aliases=["s"], help="Skips the current song")
     async def skip(self, ctx):
+        if ctx.author.voice is None:
+            # you need to be connected so that the bot knows where to go
+            await ctx.send("""``` Connecte toi a un channel ``` """)
+            return
+        elif self.vc is not None:
+            voice_channel = ctx.author.voice.channel
+            if self.vc.channel is not voice_channel:
+                await ctx.send(
+                    """``` Bot déjà connecter sur un serveur, prochaine update pour que ça marche quand même ``` """)
+                return
         if self.vc is not None and self.vc:
+            await ctx.send("""``` Music skipped ``` """)
             self.vc.stop()
             # try to play next in the queue if it exists
             await self.play_music(ctx)
 
     @commands.command(name="queue", aliases=["q"], help="Displays the current songs in queue")
     async def queue(self, ctx):
-        retval = ""
+        if ctx.author.voice is None:
+            # you need to be connected so that the bot knows where to go
+            await ctx.send("""``` Connecte toi a un channel ``` """)
+            return
+        elif self.vc is not None:
+            voice_channel = ctx.author.voice.channel
+            if self.vc.channel is not voice_channel:
+                await ctx.send(
+                    """``` Bot déjà connecter sur un serveur, prochaine update pour que ça marche quand même ``` """)
+                return
+        music_list = ""
         for i in range(0, len(self.music_queue)):
-            # display a max of 5 songs in the current queue
-            if (i > 4): break
-            retval += self.music_queue[i][0]['title'] + "\n"
+            music_list += self.music_queue[i][0]['title'] + "\n"
 
-        if retval != "":
-            await ctx.send(retval)
+        if music_list != "":
+            await ctx.send(f"""``` {str(music_list)} ```""")
         else:
-            await ctx.send("No music in queue")
+            await ctx.send("""``` No music in queue ```""")
 
     @commands.command(name="clear", aliases=["c", "bin"], help="Stops the music and clears the queue")
     async def clear(self, ctx):
+        if ctx.author.voice is None:
+            # you need to be connected so that the bot knows where to go
+            await ctx.send("""``` Connecte toi a un channel ``` """)
+            return
+        elif self.vc is not None:
+            voice_channel = ctx.author.voice.channel
+            if self.vc.channel is not voice_channel:
+                await ctx.send(
+                    """``` Bot déjà connecter sur un serveur, prochaine update pour que ça marche quand même ``` """)
+                return
         if self.vc is not None and self.is_playing:
             self.vc.stop()
         self.music_queue = []
-        await ctx.send("Music queue cleared")
+        await ctx.send("""``` Music queue cleared ````""")
 
     @commands.command(name="leave", aliases=["disconnect", "l", "d"], help="Kick the bot from VC")
     async def dc(self, ctx):
+        if ctx.author.voice is None:
+            # you need to be connected so that the bot knows where to go
+            await ctx.send("""``` Connecte toi a un channel ``` """)
+            return
+        elif self.vc is not None:
+            voice_channel = ctx.author.voice.channel
+            if self.vc.channel is not voice_channel:
+                await ctx.send(
+                    """``` Bot déjà connecter sur un serveur, prochaine update pour que ça marche quand même ``` """)
+                return
         self.is_playing = False
         self.is_paused = False
+        await ctx.send("""``` Ok bye ```""")
         await self.vc.disconnect()
+        self.vc = None

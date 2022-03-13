@@ -1,0 +1,7 @@
+discord.py==1.7.3
+youtube_dl
+PyNaCl
+python-dotenv
+discord
+aiohttp
+async-timeout
